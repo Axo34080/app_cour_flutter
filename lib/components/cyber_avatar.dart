@@ -1,13 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../utils/api.dart';
 
-/// Avatar circulaire cyberpunk avec glow neon.
-///
-/// ```dart
-/// CyberAvatar(avatarPath: user.avatar, username: user.username)
-/// CyberAvatar(avatarPath: null, username: 'Alice', radius: 28)
-/// ```
 class CyberAvatar extends StatelessWidget {
   const CyberAvatar({
     super.key,
@@ -19,9 +15,6 @@ class CyberAvatar extends StatelessWidget {
   });
 
   final String username;
-
-  /// Chemin relatif retourné par l'API (ex: "/uploads/abc.jpg").
-  /// Si null ou vide, affiche les initiales.
   final String? avatarPath;
   final double radius;
   final Color glowColor;
@@ -37,11 +30,29 @@ class CyberAvatar extends StatelessWidget {
 
   bool get _hasAvatar => avatarPath != null && avatarPath!.isNotEmpty;
 
+  bool get _isBase64 => avatarPath?.startsWith('data:') ?? false;
+
+  String get _networkUrl {
+    if (avatarPath!.startsWith('http')) return avatarPath!;
+    return '${Api.baseUrl}$avatarPath';
+  }
+
+  Uint8List? get _base64Bytes {
+    try {
+      final comma = avatarPath!.indexOf(',');
+      if (comma == -1) return null;
+      return base64Decode(avatarPath!.substring(comma + 1));
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final size = radius * 2;
     return Container(
-      width: radius * 2 + 4,
-      height: radius * 2 + 4,
+      width: size + 4,
+      height: size + 4,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
@@ -49,34 +60,68 @@ class CyberAvatar extends StatelessWidget {
           width: 1.5,
         ),
         boxShadow: showGlow
-            ? [
-                BoxShadow(
-                  color: glowColor.withValues(alpha: 0.25),
-                  blurRadius: 12,
-                  spreadRadius: 0,
-                ),
-              ]
+            ? [BoxShadow(color: glowColor.withValues(alpha: 0.25), blurRadius: 12)]
             : null,
       ),
-      child: CircleAvatar(
-        radius: radius,
-        backgroundColor: AppColors.surface,
-        backgroundImage: _hasAvatar
-            ? NetworkImage('${Api.baseUrl}$avatarPath')
-            : null,
-        onBackgroundImageError: _hasAvatar
-            ? (_, _) {} // fallback silencieux → initiales
-            : null,
-        child: _hasAvatar
-            ? null
-            : Text(
-                _initials,
-                style: TextStyle(
-                  color: glowColor,
-                  fontSize: radius * 0.7,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+      child: ClipOval(
+        child: _hasAvatar ? _buildImage(size) : _InitialsCircle(initials: _initials, size: size, color: glowColor),
+      ),
+    );
+  }
+
+  Widget _buildImage(double size) {
+    if (_isBase64) {
+      final bytes = _base64Bytes;
+      if (bytes == null) {
+        return _InitialsCircle(initials: _initials, size: size, color: glowColor);
+      }
+      return Image.memory(
+        bytes,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) =>
+            _InitialsCircle(initials: _initials, size: size, color: glowColor),
+      );
+    }
+
+    return Image.network(
+      _networkUrl,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) =>
+          _InitialsCircle(initials: _initials, size: size, color: glowColor),
+    );
+  }
+}
+
+class _InitialsCircle extends StatelessWidget {
+  const _InitialsCircle({
+    required this.initials,
+    required this.size,
+    required this.color,
+  });
+
+  final String initials;
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      color: AppColors.surface,
+      child: Center(
+        child: Text(
+          initials,
+          style: TextStyle(
+            color: color,
+            fontSize: size * 0.35,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }
