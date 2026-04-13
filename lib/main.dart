@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'pages/conversations.dart';
 import 'pages/home.dart';
 import 'pages/login.dart';
-import 'pages/profile.dart';
+import 'pages/nav_shell.dart';
 import 'pages/search_users.dart';
 import 'pages/signup.dart';
 import 'providers/auth_provider.dart';
@@ -49,8 +48,6 @@ class MyApp extends StatelessWidget {
         '/login': (_) => const LoginPage(),
         '/signup': (_) => const SignupPage(),
         '/home': (_) => const HomePage(),
-        '/conversations': (_) => const ConversationsPage(),
-        '/profile': (_) => const ProfilePage(),
         '/search': (_) => const SearchUsersPage(),
       },
     );
@@ -79,7 +76,7 @@ class _Root extends StatelessWidget {
       AuthStatus.unknown => const Scaffold(
           body: Center(child: CircularProgressIndicator()),
         ),
-      AuthStatus.authenticated => const ConversationsPage(),
+      AuthStatus.authenticated => const NavShell(),
       AuthStatus.unauthenticated => const HomePage(),
     };
   }

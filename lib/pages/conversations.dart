@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../components/components.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import '../theme/app_theme.dart';
 import 'chat.dart';
-import 'profile.dart';
 import 'search_users.dart';
 
 class ConversationsPage extends StatefulWidget {
@@ -32,55 +30,26 @@ class _ConversationsPageState extends State<ConversationsPage> {
     final myUserId = auth.user?.id ?? '';
     final unread = chat.totalUnread;
 
-    return Stack(
-      children: [
-        Scaffold(
-          appBar: AppBar(
-            title: unread > 0
-                ? Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Text('Messages'),
-                    const SizedBox(width: 8),
-                    CyberBadge(count: unread, child: const SizedBox(width: 8, height: 8)),
-                  ])
-                : const Text('Messages'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.person_outline),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ProfilePage()),
-                ),
-                tooltip: 'Profil',
-              ),
-            ],
-          ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SearchUsersPage()),
-            ),
-            backgroundColor: AppColors.neonCyan,
-            foregroundColor: AppColors.background,
-            child: const Icon(Icons.edit_outlined),
-          ),
-          body: _Body(chat: chat, myUserId: myUserId),
+    return Scaffold(
+      appBar: AppBar(
+        title: unread > 0
+            ? Row(mainAxisSize: MainAxisSize.min, children: [
+                const Text('Messages'),
+                const SizedBox(width: 8),
+                CyberBadge(count: unread, child: const SizedBox(width: 8, height: 8)),
+              ])
+            : const Text('Messages'),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SearchUsersPage()),
         ),
-
-        // Bannière appel entrant
-        if (chat.incomingCall != null)
-          CyberIncomingCall(
-            callerUsername: chat.incomingCall!.callerUsername,
-            onReject: () => chat.rejectCall(chat.incomingCall!.fromUserId),
-            onAccept: () async {
-              final call = chat.incomingCall!;
-              chat.acceptCall(call.fromUserId);
-              await launchUrl(
-                Uri.parse(call.roomUrl),
-                mode: LaunchMode.externalApplication,
-              );
-            },
-          ),
-      ],
+        backgroundColor: AppColors.neonCyan,
+        foregroundColor: AppColors.background,
+        child: const Icon(Icons.edit_outlined),
+      ),
+      body: _Body(chat: chat, myUserId: myUserId),
     );
   }
 }
