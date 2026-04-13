@@ -55,6 +55,11 @@ flutter run -d chrome
 - Liste des abonnements (créateurs suivis) accessible depuis le bouton de nouvelle conversation
 - Recherche d'utilisateurs par nom d'utilisateur (min. 2 caractères) pour contacter quelqu'un que l'on ne suit pas
 
+### Fil d'actualité
+- Posts des créateurs auxquels l'utilisateur est abonné
+- Seuls les posts accessibles (non verrouillés ou déjà débloqués) sont affichés
+- Pull-to-refresh pour actualiser le fil
+
 ### Profil
 - Modification du nom d'utilisateur et de la bio
 - Changement de photo de profil (galerie)
@@ -73,11 +78,12 @@ Lancement
    │
    ├── Pas de session → Page d'accueil → Connexion / Inscription
    │
-   └── Session active → Liste des conversations
+   └── Session active → Navbar (3 onglets)
                               │
-                              ├── Tap sur une conversation → Chat
-                              ├── Bouton ✏️ → Abonnements / Recherche
-                              └── Bouton 👤 → Profil
+                              ├── Messages → Conversations → Chat
+                              │                  └── Bouton ✏️ → Abonnements / Recherche
+                              ├── Fil → Posts des créateurs suivis
+                              └── Profil
 ```
 
 ---
@@ -88,7 +94,8 @@ Lancement
 |---------|------|
 | `provider` | Gestion d'état (AuthProvider, ChatProvider) |
 | `socket_io_client` | Connexion temps réel avec le backend |
-| `flutter_secure_storage` | Stockage sécurisé du JWT |
+| `flutter_secure_storage` | Stockage sécurisé du JWT (mobile) |
+| `shared_preferences` | Stockage du JWT (web) |
 | `http` | Appels REST |
 | `image_picker` | Sélection d'images dans la galerie |
 | `url_launcher` | Ouverture des appels Jitsi dans le navigateur |

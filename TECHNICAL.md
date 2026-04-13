@@ -38,11 +38,12 @@ lib/
 │   └── conversation.dart            # Conversation + isUnread()
 ├── services/
 │   ├── auth_service.dart            # login(), signup()
-│   ├── storage_service.dart         # flutter_secure_storage
+│   ├── storage_service.dart         # flutter_secure_storage (mobile) / SharedPreferences (web)
 │   ├── socket_service.dart          # Socket.io (connexion + événements)
 │   ├── message_service.dart         # REST conversations + historique
-│   ├── user_service.dart            # REST profil + recherche + upload
-│   └── call_service.dart            # REST création de room Jitsi
+│   ├── user_service.dart            # REST profil + recherche + abonnements + upload
+│   ├── call_service.dart            # REST création de room Jitsi
+│   └── post_service.dart            # REST posts par créateur + feed agrégé
 ├── providers/
 │   ├── auth_provider.dart           # État auth (user, token, status)
 │   └── chat_provider.dart           # État chat (conversations, messages, appels)
@@ -58,15 +59,18 @@ lib/
 │   ├── cyber_loader.dart
 │   ├── cyber_message_bubble.dart
 │   ├── cyber_message_input.dart
+│   ├── cyber_post_card.dart
 │   └── cyber_text_field.dart
 └── pages/
     ├── home.dart                    # Splash / redirection
     ├── login.dart
     ├── signup.dart
+    ├── nav_shell.dart               # Navbar 3 onglets + bannière appel entrant
     ├── conversations.dart
     ├── chat.dart
+    ├── feed.dart                    # Fil d'actualité (posts abonnements)
     ├── profile.dart
-    └── search_users.dart            # Abonnements + recherche
+    └── search_users.dart            # Abonnements + recherche utilisateurs
 ```
 
 ---
@@ -171,6 +175,29 @@ Pour les messages de type `file`, `content` contient l'URL relative (`/uploads/u
 
 Calculée depuis la liste des messages — contient `userId`, `username`, `avatar`, `lastMessage`, et expose `isUnread(myUserId)`.
 
+### Post
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `id` | `String` | UUID |
+| `title` | `String` | Titre du post |
+| `creatorId` | `String` | ID entité Creator (pour les appels API posts) |
+| `creatorUsername` | `String` | Nom d'utilisateur |
+| `creatorAvatar` | `String?` | Avatar du créateur |
+| `description` | `String?` | Contenu textuel (null si verrouillé) |
+| `image` | `String?` | URL de l'image (null si verrouillé) |
+| `isLocked` | `bool` | Post réservé aux abonnés payants |
+| `likes` | `int` | Nombre de likes |
+| `createdAt` | `DateTime` | Date de publication |
+
+`isAccessible` → `!isLocked || (image != null && description != null)` — un post verrouillé sans contenu n'est pas affiché.
+
+### Feed
+
+Le feed est construit côté client en deux étapes :
+1. `UserService.getRawSubscriptions(token)` → `List<String>` d'IDs Creator entity (pas de User ID)
+2. `PostService.getFeed(token, creatorIds)` → requêtes parallèles `GET /api/posts?creatorId=xxx`, résultats fusionnés et triés par date DESC
+
 ---
 
 ## Composants réutilisables
@@ -198,13 +225,24 @@ Défini dans `main.dart`. La page racine `_Root` choisit automatiquement la dest
 
 ```
 AuthStatus.unknown       → CircularProgressIndicator
-AuthStatus.authenticated → ConversationsPage
+AuthStatus.authenticated → NavShell (navbar 3 onglets)
 AuthStatus.unauthenticated → HomePage
 ```
 
+`NavShell` utilise un `IndexedStack` pour maintenir les 3 pages en vie simultanément (pas de rechargement au changement d'onglet) :
+
+```
+NavShell
+  ├── index 0 → ConversationsPage → ChatPage
+  ├── index 1 → FeedPage
+  └── index 2 → ProfilePage
+```
+
+La bannière d'appel entrant (`CyberIncomingCall`) est superposée au-dessus du `NavShell` entier via un `Stack`, pour rester visible quel que soit l'onglet actif.
+
 Après login/signup, `Navigator.popUntil(route.isFirst)` vide la pile pour laisser `_Root` se reconstruire.
 
-Routes nommées disponibles : `/login`, `/signup`, `/home`, `/conversations`, `/profile`, `/search`.
+Routes nommées disponibles : `/login`, `/signup`, `/home`, `/search`.
 
 ---
 
@@ -219,9 +257,19 @@ Routes nommées disponibles : `/login`, `/signup`, `/home`, `/conversations`, `/
 
 ---
 
+## Composants supplémentaires
+
+| Composant | Props clés | Usage |
+|-----------|-----------|-------|
+| `CyberPostCard` | `post` | Carte post avec avatar créateur, image, titre, description (3 lignes), likes |
+
+---
+
 ## Sécurité
 
-- Le JWT est stocké dans `flutter_secure_storage` (Keychain iOS / Keystore Android) — jamais en SharedPreferences
+- **Mobile** : JWT stocké dans `flutter_secure_storage` (Keychain iOS / Keystore Android)
+- **Web** : JWT stocké dans `SharedPreferences` (localStorage) — `flutter_secure_storage` utilise la Web Crypto API qui est instable selon les navigateurs
+- La branche est contrôlée via `kIsWeb` dans `StorageService`
 - Tous les appels REST et la connexion Socket.io transmettent le token dans le header `Authorization: Bearer <token>`
 - L'upload n'accepte que les images (filtre côté backend sur le MIME type et l'extension)
 - Taille maximale d'upload : 5 MB
