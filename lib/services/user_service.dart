@@ -47,6 +47,19 @@ class UserService {
     }).toList();
   }
 
+  /// Retourne les IDs des entités Creator (pour POST /api/posts?creatorId=)
+  Future<List<String>> getRawSubscriptions(String token) async {
+    final res = await http.get(
+      Uri.parse('$_base/subscriptions'),
+      headers: Api.authHeaders(token),
+    ).timeout(const Duration(seconds: 10));
+    if (res.statusCode != 200) return [];
+    final list = jsonDecode(res.body) as List;
+    return list
+        .map((e) => (e['creator'] as Map<String, dynamic>)['id'] as String)
+        .toList();
+  }
+
   Future<List<User>> search(String token, String query) async {
     final uri = Uri.parse('$_base/users/search').replace(
       queryParameters: {'q': query},
