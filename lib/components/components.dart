@@ -1,4 +1,5 @@
 export 'cyber_avatar.dart';
+export 'cyber_post_card.dart';
 export 'cyber_incoming_call.dart';
 export 'cyber_badge.dart';
 export 'cyber_button.dart';
